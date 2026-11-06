@@ -1,10 +1,17 @@
 <div align="center">
 
+<img src="assets/hr-chatbot-banner.png" alt="Illustration of an AI chatbot connecting documents, a calendar, and a database" width="800" />
+
 # HR Self-Service Chatbot with RAG
 
 **An n8n workflow project connecting LINE, AI-assisted document search, and HR self-service.**
 
-`n8n` · `LINE Messaging API` · `OpenAI` · `Supabase` · `PostgreSQL` · `Google Drive` · `Gmail`
+[![n8n](https://img.shields.io/badge/Automation-n8n-EA4B71?logo=n8n&logoColor=white)](https://n8n.io/)
+[![LINE](https://img.shields.io/badge/Messaging-LINE-06C755?logo=line&logoColor=white)](https://developers.line.biz/)
+[![OpenAI](https://img.shields.io/badge/AI-OpenAI-412991?logo=openai&logoColor=white)](https://openai.com/)
+[![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com/)
+[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Google Drive](https://img.shields.io/badge/Documents-Google%20Drive-4285F4?logo=googledrive&logoColor=white)](https://drive.google.com/)
 
 </div>
 
@@ -14,7 +21,7 @@ This project was developed during my software developer co-operative education p
 
 The workflows are shared as a **portfolio reference**. The exports have been sanitized and require configuration, database objects, credentials, and testing before they can be used. They are not a ready-to-deploy HR system.
 
-## Features
+## Key Features
 
 - **HR questions with RAG:** retrieves relevant document content from a Supabase vector store for the AI agent to use in responses.
 - **Knowledge-base maintenance:** Google Drive triggers handle created and updated documents; a separate deletion flow archives the corresponding record. Review and adapt document and vector cleanup for your data model.
@@ -23,7 +30,7 @@ The workflows are shared as a **portfolio reference**. The exports have been san
 - **Leave confirmation:** sends a LINE Flex Message for the employee to review before the main workflow processes the confirmation.
 - **Leave processing:** the confirmation path updates leave balance, records a request, sends an HR email, and replies through LINE.
 
-## Workflow at a glance
+## Architecture
 
 ```mermaid
 flowchart LR
@@ -43,6 +50,16 @@ flowchart LR
 ```
 
 The diagram is a conceptual overview; see the individual n8n nodes for the actual routing and conditions.
+
+## Technology Stack
+
+| Layer | Technologies |
+| --- | --- |
+| Workflow orchestration | n8n |
+| Messaging | LINE Messaging API, LINE Flex Messages |
+| AI and retrieval | OpenAI models and embeddings, Supabase vector store, RAG |
+| Data and memory | Supabase, PostgreSQL, Google Sheets |
+| Documents and notifications | Google Drive, Gmail |
 
 ## Repository contents
 
@@ -66,6 +83,8 @@ The original `.env`, Docker Compose configuration, n8n runtime data, local files
 ## Before real-world use
 
 Review LINE webhook signature verification, authentication and authorization, employee identity verification, least-privilege access, privacy, error handling, and audit logging. In particular, validate leave balances and concurrent requests on the server and make balance updates and leave records atomic; the exported sequential nodes alone should not be assumed to provide transactional or replay protection. Review AI output and RAG data handling before exposing company documents or employee information.
+
+> The banner above is a conceptual illustration created for this repository; it is not a screenshot of the application.
 
 ## Author
 
