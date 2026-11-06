@@ -1,0 +1,392 @@
+{
+  "name": "Leave Confirmation Tool",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "lineID"
+            },
+            {
+              "name": "leave_type"
+            },
+            {
+              "name": "start_date"
+            },
+            {
+              "name": "end_date"
+            },
+            {
+              "name": "start_time"
+            },
+            {
+              "name": "end_time"
+            },
+            {
+              "name": "days",
+              "type": "number"
+            },
+            {
+              "name": "reason"
+            }
+          ]
+        }
+      },
+      "id": "c055762a-8fe7-4141-a639-df2372f30060",
+      "typeVersion": 1.1,
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        -64,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "employee",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "lineid",
+              "keyValue": "={{ $('When Executed by Another Workflow').item.json.lineID }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        128,
+        464
+      ],
+      "id": "8ea392a8-03ee-49a2-9896-e9d6d0d10ff5",
+      "name": "Get Employee",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f677fafb-ed52-44cc-893e-d93030fd9987",
+              "leftValue": "={{ $item(\"0\").$node[\"Get Employee\"].json }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        320,
+        464
+      ],
+      "id": "f2785bbd-07e6-4296-8f10-0c903575090f",
+      "name": "Check Employee Exists"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      response: \"ไม่พบ lineID นี้ กรุณาพิมลงทะเบียนแล้วตามด้วยรหัสพนักงานก่อนค่ะ\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        624
+      ],
+      "id": "8af36644-5dbe-4630-b152-af3e8bd1fbcd",
+      "name": "Error Not Found"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const params = $json;\nconst now = new Date();\nconst today = new Date(now.getFullYear(), now.getMonth(), now.getDate());\n\nfunction smartParseDate(dateStr) {\n    if (!dateStr) return null;\n    let d = new Date(dateStr);\n    if (d < today && d.getMonth() < today.getMonth()) {\n        d.setFullYear(d.getFullYear() + 1);\n    }\n    return d;\n}\n\nlet startDate = smartParseDate(params.start_date);\nlet endDate = smartParseDate(params.end_date);\n\nif (!endDate && startDate) endDate = new Date(startDate);\nif (endDate < startDate) {\n   endDate.setFullYear(endDate.getFullYear() + 1);\n}\n\nlet isValid = true;\nlet errorMsg = \"\";\n\nif (startDate.getTime() < today.getTime()) {\n    isValid = false;\n    errorMsg = `ไม่สามารถทำรายการย้อนหลังได้ครับ (คุณเลือกวันที่ ${params.start_date})`;\n}\n\nfunction toISODate(d) {\n    const year = d.getFullYear();\n    const month = String(d.getMonth() + 1).padStart(2, '0');\n    const day = String(d.getDate()).padStart(2, '0');\n    return `${year}-${month}-${day}`;\n}\n\nreturn {\n    json: {\n        ...params,\n        start_date: toISODate(startDate),\n        end_date: toISODate(endDate),\n        days: params.days,\n        is_valid: isValid,\n        error_message: errorMsg\n    }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        384
+      ],
+      "id": "74c101e3-9abe-4280-87af-dcf3fa14da81",
+      "name": "Convert Year and Valid Date"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f677fafb-ed52-44cc-893e-d93030fd9987",
+              "leftValue": "={{ $json.is_valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        720,
+        384
+      ],
+      "id": "ecd0c3d5-e81f-4a23-98e1-bec570565e5b",
+      "name": "Check Date Valid"
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorMsg = $('Convert Year and Valid Date').first().json.error_message;\n\nreturn [\n  {\n    json: {\n      response: `ทำรายการไม่สำเร็จ: ${errorMsg}` \n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        544
+      ],
+      "id": "7d304aa4-b9d4-4953-ab6b-1ae16e805d40",
+      "name": "Error Date Not Valid"
+    },
+    {
+      "parameters": {
+        "jsCode": "const triggerParams = $('Convert Year and Valid Date').first().json;\nconst employeeData = $('Get Employee').first().json;\n\nfunction formatThaiDate(dateString) {\n  if (!dateString) return \"\";\n  const parts = dateString.split('-');\n  if (parts.length !== 3) return dateString;\n  const yearAD = parseInt(parts[0]);\n  const month = parts[1];\n  const day = parts[2];\n  const yearBE = yearAD + 543;\n  return `${day}/${month}/${yearBE}`;\n}\n\nconst days = parseFloat(triggerParams.days);\nconst leaveType = triggerParams.leave_type;\nconst leaveTypeThai = leaveType === 'sick' ? 'ลาป่วย' : 'ลากิจ/พักร้อน';\nconst startDateThai = formatThaiDate(triggerParams.start_date);\nconst endDateThai = formatThaiDate(triggerParams.end_date);\nconst startTime = triggerParams.start_time;\nconst endTime = triggerParams.end_time;\nconst reason = triggerParams.reason || '-';\n\nconst currentBalance = leaveType === 'sick' \n  ? parseFloat(employeeData.sick_balance) \n  : parseFloat(employeeData.annual_balance);\nconst remainingBalance = currentBalance - days;\n\nif (remainingBalance < 0) {\n  return [\n    {\n      json: {\n        response: `ไม่สามารถ${leaveTypeThai}ได้ เนื่องจากมีวันลาไม่เพียงพอ วันลาของคุณ ${employeeData.firstname} เหลือจำนวน ${currentBalance} วัน`,\n        sendFlex: false\n      }\n    }\n  ];\n}\n\nlet timeInfo = \"\";\nif (startTime && startTime !== \"00:00:00\" && startTime !== \"00:00\" && startTime !== \"\") {\n    const sTime = startTime.substring(0, 5);\n    const eTime = endTime ? endTime.substring(0, 5) : \"\";\n    timeInfo = ` (เวลา ${sTime} - ${eTime})`;\n}\n\nlet dateMessage = \"\";\nif (triggerParams.start_date === triggerParams.end_date) {\n    dateMessage = `${startDateThai}${timeInfo}`;\n} else {\n    dateMessage = `${startDateThai} ถึง ${endDateThai}${timeInfo}`;\n}\n\nconst confirmationId = `leave_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;\n\nconst confirmData = JSON.stringify({\n  action: 'confirm_leave',\n  id: confirmationId,\n  lineID: triggerParams.lineID,\n  leave_type: leaveType,\n  start_date: triggerParams.start_date,\n  end_date: triggerParams.end_date,\n  start_time: startTime || '',\n  end_time: endTime || '',\n  days: days,\n  reason: reason\n});\n\nconst cancelData = JSON.stringify({\n  action: 'cancel_leave',\n  id: confirmationId\n});\n\nconst flexMessage = {\n  type: \"flex\",\n  altText: `ยืนยันการ${leaveTypeThai}`,\n  contents: {\n    type: \"bubble\",\n    size: \"mega\",\n    header: {\n      type: \"box\",\n      layout: \"vertical\",\n      contents: [\n        {\n          type: \"text\",\n          text: `ยืนยันการ${leaveTypeThai}`,\n          weight: \"bold\",\n          size: \"xl\",\n          color: \"#ffffff\"\n        }\n      ],\n      backgroundColor: leaveType === 'sick' ? \"#FF6B6B\" : \"#4ECDC4\",\n      paddingAll: \"20px\"\n    },\n    body: {\n      type: \"box\",\n      layout: \"vertical\",\n      contents: [\n        {\n          type: \"box\",\n          layout: \"horizontal\",\n          contents: [\n            { type: \"text\", text: \"ชื่อพนักงาน\", size: \"sm\", color: \"#555555\", flex: 0 },\n            { type: \"text\", text: `${employeeData.firstname} ${employeeData.lastname}`, size: \"sm\", color: \"#111111\", align: \"end\", weight: \"bold\" }\n          ],\n          margin: \"md\"\n        },\n        {\n          type: \"box\",\n          layout: \"horizontal\",\n          contents: [\n            { type: \"text\", text: \"ประเภทการลา\", size: \"sm\", color: \"#555555\", flex: 0 },\n            { type: \"text\", text: leaveTypeThai, size: \"sm\", color: \"#111111\", align: \"end\", weight: \"bold\" }\n          ],\n          margin: \"md\"\n        },\n        {\n          type: \"box\",\n          layout: \"horizontal\",\n          contents: [\n            { type: \"text\", text: \"วันที่ลา\", size: \"sm\", color: \"#555555\", flex: 0 },\n            { type: \"text\", text: dateMessage, size: \"sm\", color: \"#111111\", align: \"end\", weight: \"bold\" }\n          ],\n          margin: \"md\"\n        },\n        {\n          type: \"box\",\n          layout: \"horizontal\",\n          contents: [\n            { type: \"text\", text: \"จำนวนวัน\", size: \"sm\", color: \"#555555\", flex: 0 },\n            { type: \"text\", text: `${days} วัน`, size: \"sm\", color: \"#111111\", align: \"end\", weight: \"bold\" }\n          ],\n          margin: \"md\"\n        },\n        {\n          type: \"box\",\n          layout: \"horizontal\",\n          contents: [\n            { type: \"text\", text: \"เหตุผล\", size: \"sm\", color: \"#555555\", flex: 0 },\n            { type: \"text\", text: reason, size: \"sm\", color: \"#111111\", align: \"end\", weight: \"bold\", wrap: true }\n          ],\n          margin: \"md\"\n        },\n        { type: \"separator\", margin: \"xl\" },\n        {\n          type: \"box\",\n          layout: \"horizontal\",\n          contents: [\n            { type: \"text\", text: \"ยอดคงเหลือหลังลา\", size: \"sm\", color: \"#555555\", flex: 0 },\n            { type: \"text\", text: `${remainingBalance} วัน`, size: \"sm\", color: leaveType === 'sick' ? \"#FF6B6B\" : \"#4ECDC4\", align: \"end\", weight: \"bold\" }\n          ],\n          margin: \"xl\"\n        }\n      ],\n      paddingAll: \"20px\"\n    },\n    footer: {\n      type: \"box\",\n      layout: \"horizontal\",\n      spacing: \"sm\",\n      contents: [\n        {\n          type: \"button\",\n          style: \"primary\",\n          height: \"sm\",\n          action: { type: \"postback\", label: \"✓ ยืนยัน\", data: confirmData, displayText: \"ยืนยันการลา\" },\n          color: \"#4ECDC4\"\n        },\n        {\n          type: \"button\",\n          style: \"secondary\",\n          height: \"sm\",\n          action: { type: \"postback\", label: \"✗ ยกเลิก\", data: cancelData, displayText: \"ยกเลิกการลา\" }\n        }\n      ],\n      flex: 0,\n      paddingAll: \"20px\"\n    }\n  }\n};\n\nreturn [\n  {\n    json: {\n      response: \"กรุณากดยืนยันหรือยกเลิกในข้อความด้านล่างค่ะ\",\n      flexMessage: flexMessage,\n      sendFlex: true,\n      lineID: triggerParams.lineID\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        304
+      ],
+      "id": "39106a33-d59c-43e9-81c2-a570f0c42908",
+      "name": "Create Flex Message"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "check-send-flex",
+              "leftValue": "={{ $json.sendFlex }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        304
+      ],
+      "id": "check-should-send-flex",
+      "name": "Should Send Flex?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"to\": {{ JSON.stringify($json.lineID) }},\n  \"messages\": [\n    {{ JSON.stringify($json.flexMessage) }}\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1312,
+        224
+      ],
+      "id": "send-flex-directly",
+      "name": "Send Flex to LINE"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      response: $('Create Flex Message').first().json.response\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1504,
+        224
+      ],
+      "id": "return-response-after-flex",
+      "name": "Return Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      response: $('Create Flex Message').first().json.response\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        384
+      ],
+      "id": "return-error-response",
+      "name": "Return Error Response"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Get Employee",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Employee": {
+      "main": [
+        [
+          {
+            "node": "Check Employee Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Employee Exists": {
+      "main": [
+        [
+          {
+            "node": "Convert Year and Valid Date",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Year and Valid Date": {
+      "main": [
+        [
+          {
+            "node": "Check Date Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Date Valid": {
+      "main": [
+        [
+          {
+            "node": "Create Flex Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Date Not Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Flex Message": {
+      "main": [
+        [
+          {
+            "node": "Should Send Flex?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Send Flex?": {
+      "main": [
+        [
+          {
+            "node": "Send Flex to LINE",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Flex to LINE": {
+      "main": [
+        [
+          {
+            "node": "Return Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

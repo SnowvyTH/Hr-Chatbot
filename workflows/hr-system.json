@@ -1,0 +1,1777 @@
+{
+  "name": "[Main] HR System",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message }}",
+        "options": {
+          "systemMessage": "=คุณคือเจ้าหน้าที่ฝ่ายบุคคล (HR Support) ประจำบริษัท มีหน้าที่ดูแลสวัสดิการและจัดการวันลาของพนักงาน\nบุคลิกการตอบ: สุภาพ เป็นทางการ กระชับ และตรงประเด็น (Corporate Professional Tone)\n\nข้อกำหนดสำคัญในการตอบ (Style Guardrails):\n1. ห้ามใช้ประโยคปิดท้ายที่ฟุ่มเฟือย เช่น \"หากต้องการความช่วยเหลือแจ้งได้ทันที\", \"หวังว่าจะเป็นประโยชน์\", \"มีอะไรให้ช่วยอีกไหม\" หรือประโยคแนว AI Assistant โดยเด็ดขาด\n2. เมื่อทำรายการสำเร็จ ให้แจ้งผลลัพธ์และข้อมูลสำคัญ (เช่น ยอดวันลาคงเหลือ) แล้วจบการสนทนาทันที\n3. ใช้ภาษาไทยที่ถูกต้องและสุภาพเสมอ\n4.ห้ามใช้ตัวหนา (Bold) หรือเครื่องหมายดอกจัน (**) ในการตอบโดยเด็ดขาด\n\nขั้นตอนการทำงานของระบบ (Technical Workflow):\n1. ขั้นแรก (เสมอ): เมื่อได้รับคำถาม ให้เรียกใช้เครื่องมือ \"Chat Cache\" เพื่อค้นหาว่าเคยมีคำตอบสำหรับคำถามนี้มาก่อนหรือไม่\n   - หากเจอคำตอบ: ให้ใช้คำตอบนั้นตอบผู้ใช้งานทันที แล้วจบงาน\n2. ขั้นตอนที่สอง: หากไม่เจอใน Cache ให้เรียกใช้เครื่องมือ \"Supabase Vector Store\" เพื่อค้นหาข้อมูลในเอกสารบริษัท\n3. ขั้นตอนที่สาม: หลังจากสร้างคำตอบจาก Vector Store เสร็จแล้ว คุณต้องเรียกใช้เครื่องมือ \"Save Answer to Cache\" เพื่อบันทึกคำถามและคำตอบลงระบบสำหรับใช้ในครั้งถัดไป\n4. สำหรับการขอลา (Leave Request): หากผู้ใช้ต้องการลา ให้เรียกใช้เครื่องมือ \"Leave Confirmation Tool\" ซึ่งจะส่งข้อมูลสรุปการลาให้ผู้ใช้ยืนยันก่อน โดยแจ้งผู้ใช้ว่า \"กรุณาตรวจสอบข้อมูลการลาในข้อความด้านล่างและกดยืนยันค่ะ\"\n\nToday is {{ $now.format('yyyy-MM-dd') }}. When extraction dates, if the year is not specified, use the current year from today's date."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -1184,
+        320
+      ],
+      "id": "90d9a22c-00e1-4c2f-bbf4-a817f90365cd",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -1376,
+        528
+      ],
+      "id": "1bf2fb1d-33d4-40b6-b832-f3efe13382cb",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "ดึงข้อมูลบริษัทเพื่อใช้ในการตอบคำถาม ใช้เป็นตัวเลือกที่ 2 เมื่อค้นหาจาก Cache ไม่เจอ",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "topK": 20,
+        "includeDocumentMetadata": false,
+        "options": {
+          "queryName": "match_documents"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -1120,
+        528
+      ],
+      "id": "876824c3-475c-4afd-9b98-c210012e1373",
+      "name": "Supabase Vector Store"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1120,
+        992
+      ],
+      "id": "14533822-b52a-423d-861e-41355554ccc6",
+      "name": "Embeddings OpenAI"
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "fileName",
+                "value": "={{ $('Create File').item.json.name }}"
+              },
+              {
+                "name": "date",
+                "value": "={{ $now }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        -1376,
+        896
+      ],
+      "id": "64ac0f91-713c-43cf-a5e8-944b1bf403fc",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1568,
+        736
+      ],
+      "id": "3de7ba88-57ae-4861-af09-52814988c84e",
+      "name": "Download file"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Edit Fields').item.json.senderID }}",
+        "tableName": "chat_history",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        -1232,
+        528
+      ],
+      "id": "08d820ff-68fc-45c6-bc78-f37616fae3d3",
+      "name": "Postgres Chat Memory"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1728,
+        736
+      ],
+      "id": "882d158b-5883-4250-9e55-22ff8c7b3a3a",
+      "name": "Create File"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "event": "fileUpdated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1040,
+        736
+      ],
+      "id": "7913d746-35b7-48ef-a628-caf9f3d9dd9a",
+      "name": "Update File"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "documents",
+        "filterType": "string",
+        "filterString": "=metadata->>fileName=ilike.*{{$json.name}}*",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "isActive",
+              "fieldValue": "false"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -896,
+        736
+      ],
+      "id": "b76098e4-68cb-47e1-9f42-019730feeb84",
+      "name": "Update a row"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Update File').item.json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -752,
+        736
+      ],
+      "id": "9c2e89b8-029d-40a1-a827-3c65e9e5a570",
+      "name": "Download file1",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -608,
+        736
+      ],
+      "id": "84522718-36c7-4f29-8ff5-01232f109967",
+      "name": "Supabase Vector Update Data"
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "fileName",
+                "value": "={{ $('Update File').item.json.name }}"
+              },
+              {
+                "name": "date",
+                "value": "={{ $now }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        -560,
+        896
+      ],
+      "id": "15071524-c741-4e6f-bf9c-924ec9699379",
+      "name": "Default Data Loader1"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "",
+            "mode": "list"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1536,
+        1104
+      ],
+      "id": "7216d5a1-1ee1-4681-b039-cb2496dbadf1",
+      "name": "Search files and folders"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1328,
+        1104
+      ],
+      "id": "88b3151e-1539-4c64-b914-471f8856c6bf",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "documents",
+        "returnAll": true,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "=metadata->>fileName",
+              "condition": "eq",
+              "keyValue": "={{ $json.name }}"
+            },
+            {
+              "keyName": "isActive",
+              "condition": "eq",
+              "keyValue": "true"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1008,
+        1200
+      ],
+      "id": "7ce9b189-3e95-447a-b1eb-2b71a618fd24",
+      "name": "Get many rows",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Search files and folders').item.json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -608,
+        1104
+      ],
+      "id": "ef90bc03-9222-4820-b87e-b7c0b0cf1899",
+      "name": "Download file2"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -1424,
+        736
+      ],
+      "id": "a1d99c81-6612-4b68-bb23-f3743776170d",
+      "name": "Supabase Vector Insert Data"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -448,
+        1104
+      ],
+      "id": "ff569abb-4a5d-4669-b546-95196c693a68",
+      "name": "Vector Data update"
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "fileName",
+                "value": "={{ $('Download file2').item.json.name }}"
+              },
+              {
+                "name": "date",
+                "value": "={{ $now }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        -400,
+        1264
+      ],
+      "id": "46a180f0-ab3a-49db-a56a-a36af6d6cb26",
+      "name": "Default Data Loader2"
+    },
+    {
+      "parameters": {
+        "description": "Call this tool ONLY when the user wants to request a leave (submit a new leave request). This tool will create a confirmation message for the user to review before processing.\nRequired arguments: lineID, leave_type (annual or sick), days, start_date (YYYY-MM-DD), and end_date (YYYY-MM-DD). Optional arguments: start_time (HH:mm) and end_time (HH:mm) for partial leave, and reason.\n\nIMPORTANT BUSINESS RULES FOR HALF-DAY:\n1. If the user says \"half day\" without specifying time or says \"morning\", ALWAYS set start_time=\"00:00\" and end_time=\"12:00\".\n2. If the user says \"afternoon\", ALWAYS set start_time=\"13:00\" and end_time=\"23:59\".\n3. \"Half day\" always counts as 0.5 days. Do not ask for specific hours if the user mentions \"half day\", \"morning\", or \"afternoon\".\n\nThe response from this tool will include a Flex Message for confirmation. Tell the user to check the confirmation card below.",
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "days": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('days', `Calculate days automatically. Full day = 1. Half day (morning/afternoon) = 0.5. No other fractions allowed.`, 'number') }}",
+            "leave_type": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('leave_type', `ถ้าหากลาเฉยๆ โดยไม่ระบุอะไรให้คิดซะว่าลาหยุด annual\nแต่ถ้าลาป่วย ต้องมีคำว่าลาป่วยจึงระบุว่า sick`, 'string') }}",
+            "lineID": "={{ $('Edit Fields').item.json.userID }}",
+            "start_date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('start_date', `วันที่เริ่มลา (Format YYYY-MM-DD)`, 'string') }}",
+            "end_date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('end_date', `วันที่สิ้นสุดการลา (Format YYYY-MM-DD)`, 'string') }}",
+            "start_time": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('start_time', `เวลาที่เริ่มลา (Format HH:mm เช่น 12:00) ถ้าไม่ระบุให้ปล่อยว่าง\nFor full day leave, leave empty. For 'half day' or 'morning', set to \"00:00\". For 'afternoon', set to \"13:00\".`, 'string') }}",
+            "end_time": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('end_time', `เวลาสิ้นสุดการลา (Format HH:mm เช่น 12:00) ถ้าไม่ระบุให้ปล่อยว่าง\nFor full day leave, leave empty. For 'half day' or 'morning', set to \"12:00\". For 'afternoon', set to \"23:59\".`, 'string') }}",
+            "reason": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('reason', `เหตุผลของการลา - สำคัญมาก: ให้อ่านข้อความผู้ใช้ทั้งหมดและ extract เหตุผลที่ผู้ใช้ระบุมาโดยตรง\n\nตัวอย่างการ extract:\n \"ลาพักร้อน 29-30 ธ.ค. ไปต่างจังหวัด\" → reason = \"ไปต่างจังหวัด\"\n \"ลาป่วย วันนี้ ปวดหัว\" → reason = \"ปวดหัว\"\n \"ขอลา 2 วัน ไปงานแต่งเพื่อน\" → reason = \"ไปงานแต่งเพื่อน\"\n \"ลาพักร้อนวันศุกร์ พาลูกไปหาหมอ\" → reason = \"พาลูกไปหาหมอ\"\n\nใช้ค่าเริ่มต้นเฉพาะเมื่อผู้ใช้ไม่ได้ระบุเหตุผลใดๆ เลย:\nลาป่วย: \"มีอาการป่วย\"\nลากิจ/พักร้อน: \"ทำธุระส่วนตัว\"`, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "lineID",
+              "displayName": "lineID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "leave_type",
+              "displayName": "leave_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "start_date",
+              "displayName": "start_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "end_date",
+              "displayName": "end_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "start_time",
+              "displayName": "start_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "end_time",
+              "displayName": "end_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "days",
+              "displayName": "days",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "reason",
+              "displayName": "reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        -448,
+        528
+      ],
+      "id": "fede05ed-3666-45da-98bb-0027a965fe6a",
+      "name": "Leave Confirmation Tool"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1728,
+        1104
+      ],
+      "id": "cffd1f11-a066-4eda-91a9-dd992ca54678",
+      "name": "Schedule"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0473ba25-e4dc-4dd3-a65c-dfe97d07cdc5",
+              "leftValue": "={{ $item(\"0\").$node[\"Get many rows\"].json }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -832,
+        1088
+      ],
+      "id": "436cf8c5-c6e6-4d76-853c-f8ef5cbe89d6",
+      "name": "Check Record Active 2",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "72f781f0-632f-4737-a75a-dd952bc18751",
+              "leftValue": "={{ $item(\"0\").$node[\"Get many rows\"].json }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -864,
+        1296
+      ],
+      "id": "2a547752-eeaa-44f3-baae-bf0bad507e2e",
+      "name": "Check Record Active"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b49109fa-d30b-4104-adb8-9a3f62570875",
+              "name": "name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1168,
+        1200
+      ],
+      "id": "17801f92-6cb3-48f9-8219-4a7d02d7d583",
+      "name": "Set File Name"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "15833bf3-9b5f-43c6-890e-187041765e48",
+              "name": "name",
+              "value": "={{ $('Set File Name').item.json.name }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -688,
+        1376
+      ],
+      "id": "ab59b0ec-7bd9-44e9-97a9-711045b0f0ff",
+      "name": "Set File Name for Create Row"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        736
+      ],
+      "id": "02dd990a-2578-4aa4-8843-026c07e97e17",
+      "name": "Delete File"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "documents",
+        "filterType": "string",
+        "filterString": "=metadata->>fileName=ilike.*{{$json.name}}*",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "isActive",
+              "fieldValue": "false"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        736
+      ],
+      "id": "37d5ea63-2ef2-438e-a1f6-0dc9d38859c1",
+      "name": "Archive Row"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "ใช้สำหรับค้นหาประวัติคำถาม-คำตอบที่เคยเกิดขึ้นแล้ว เครื่องมือนี้รวบรวมคำตอบที่ถูกต้องไว้สำหรับทุกคน ต้องเรียกใช้เครื่องมือนี้เป็นอันดับแรกเสมอ",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        -864,
+        528
+      ],
+      "id": "bef33833-9921-4c6e-9405-0a8e37320a3c",
+      "name": "Chat Cache"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "ใช้สำหรับบันทึกคำถามและคำตอบใหม่ลงในฐานข้อมูล จะใช้เครื่องมือนี้ก็ต่อเมื่อหาคำตอบจาก Chat Cache ไม่เจอและต้องสร้างคำตอบใหม่ขึ้นมาเองเท่านั้น",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $now }}",
+            "Question": "={{ $json.message }}",
+            "Answer": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Answer', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Question",
+              "displayName": "Question",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Answer",
+              "displayName": "Answer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        -752,
+        528
+      ],
+      "id": "96c4139a-ce1d-421a-a650-d20e0c23f4fe",
+      "name": "Save Answer to Cache"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"userID\": {{ JSON.stringify($json.body.events[0].source.userId) }},\n  \"senderID\" {{ JSON.stringify($json.body.events[0].replyToken) }},\n  \"message\": {{ JSON.stringify($json.body.events[0].message.text) }}\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1360,
+        320
+      ],
+      "id": "a1b8973e-405a-45bf-968b-787299c81bf1",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hr-chatbot-line-webhook",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1840,
+        304
+      ],
+      "id": "89b7c0b4-f319-4aa0-a82b-1fc4b84c3287",
+      "name": "Line Chat API"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Call this tool when the user wants to check their remaining leave balance (annual leave or sick leave), view their leave quotas, or retrieve their employee profile information. Do not use this tool for submitting a new leave request.",
+        "operation": "get",
+        "tableId": "employee",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "lineid",
+              "keyValue": "={{ $json.userID }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        528
+      ],
+      "id": "90b7a412-0c8f-4a25-92cb-633b2ef1a932",
+      "name": "Get Employee Info"
+    },
+    {
+      "parameters": {
+        "description": "Call this tool when the user wants to ลงทะเบียน, register, sign up, or link their Line account to their employee profile. The user must provide their 'employee_id' (e.g. ลงทะเบียน p2601001).",
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "employee_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('employee_id', `เมื่อผู้ใช้พิมรหัสพนักงานมานำมาใส่ช่องนี้`, 'string') }}",
+            "line_id": "={{ $json.userID }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "employee_id",
+              "displayName": "employee_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "line_id",
+              "displayName": "line_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        -304,
+        528
+      ],
+      "id": "a766ebb4-dbe9-4693-973c-d6394abb394c",
+      "name": "Register LineID"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"replyToken\": {{ JSON.stringify($('Edit Fields').item.json.senderID) }},\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": {{ JSON.stringify($('AI Agent').item.json.output) }}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -320,
+        304
+      ],
+      "id": "d81ecf39-e6c5-4e0f-a222-dd633e35dd7a",
+      "name": "Send To Line"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.events[0].type }}",
+                    "rightValue": "postback",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "ba1b236b-7271-4b55-971b-8c57422c59b8"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Postback"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.events[0].type }}",
+                    "rightValue": "message",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "69492ded-cd73-494f-bd94-c2ae7f3dd0fd"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Message"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -1632,
+        304
+      ],
+      "id": "52317560-718c-45ab-8ba4-5c740778c546",
+      "name": "Event Type?"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const event = $json.body.events[0];\nconst postbackData = JSON.parse(event.postback.data);\n\nreturn {\n  json: {\n    replyToken: event.replyToken,\n    userID: event.source.userId,\n    action: postbackData.action,\n    lineID: postbackData.lineID,\n    leave_type: postbackData.leave_type,\n    start_date: postbackData.start_date,\n    end_date: postbackData.end_date,\n    start_time: postbackData.start_time || '',\n    end_time: postbackData.end_time || '',\n    days: postbackData.days,\n    reason: postbackData.reason\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1280,
+        64
+      ],
+      "id": "17206f69-cd6f-4def-bf1b-0335c91689df",
+      "name": "Parse Postback Data"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "confirm_leave",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "044a73e4-f51c-473a-8d9e-fc92ce6fd8f6"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Confirm"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "cancel_leave",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "c5cfc9f4-f103-4984-8d69-843f9873ac92"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Cancel"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -1072,
+        64
+      ],
+      "id": "9e5af90f-7056-45ec-8114-b527053e27d7",
+      "name": "Action?"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "employee",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "lineid",
+              "keyValue": "={{ $json.lineID }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -864,
+        -16
+      ],
+      "id": "f9e847b3-927f-4a39-b9a2-3db1115c1941",
+      "name": "Get Employee for Leave"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const postback = $('Parse Postback Data').first().json;\nconst employee = $json;\n\nconst leaveType = postback.leave_type;\nconst days = parseFloat(postback.days);\n\n// คำนวณยอดคงเหลือ\nconst currentBalance = leaveType === 'sick' \n  ? parseFloat(employee.sick_balance) \n  : parseFloat(employee.annual_balance);\nconst newBalance = currentBalance - days;\n\n// ฟังก์ชันแปลงวันที่เป็น พ.ศ.\nfunction formatThaiDate(dateString) {\n  if (!dateString) return \"\";\n  const parts = dateString.split('-');\n  if (parts.length !== 3) return dateString;\n  const yearBE = parseInt(parts[0]) + 543;\n  return `${parts[2]}/${parts[1]}/${yearBE}`;\n}\n\nconst leaveTypeThai = leaveType === 'sick' ? 'ลาป่วย' : 'ลากิจ/พักร้อน';\nconst startDateThai = formatThaiDate(postback.start_date);\nconst endDateThai = formatThaiDate(postback.end_date);\n\nlet dateRange = startDateThai;\nif (postback.start_date !== postback.end_date) {\n  dateRange = `${startDateThai} ถึง ${endDateThai}`;\n}\n\nreturn {\n  json: {\n    ...postback,\n    employee_id: employee.employee_id,\n    firstname: employee.firstname,\n    lastname: employee.lastname,\n    email: employee.email,\n    current_balance: currentBalance,\n    new_balance: newBalance,\n    leaveTypeThai: leaveTypeThai,\n    dateRange: dateRange,\n    balance_field: leaveType === 'sick' ? 'sick_balance' : 'annual_balance'\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        -16
+      ],
+      "id": "760615a8-4d53-417d-9373-3e3de511a24b",
+      "name": "Prepare Leave Data"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "employee",
+        "filterType": "string",
+        "filterString": "=lineid=eq.{{ $json.lineID }}",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "={{ $json.balance_field }}",
+              "fieldValue": "={{ $json.new_balance }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        -16
+      ],
+      "id": "5ac6cc30-4143-45a6-b57a-93119c96c270",
+      "name": "Update Balance"
+    },
+    {
+      "parameters": {
+        "tableId": "leave",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "empid",
+              "fieldValue": "={{ $('Get Employee for Leave').item.json.empid }}"
+            },
+            {
+              "fieldId": "leavetype",
+              "fieldValue": "={{ $('Parse Postback Data').item.json.leave_type }}"
+            },
+            {
+              "fieldId": "startdate",
+              "fieldValue": "={{ $('Prepare Leave Data').first().json.start_date }}"
+            },
+            {
+              "fieldId": "enddate",
+              "fieldValue": "={{ $('Prepare Leave Data').first().json.end_date }}"
+            },
+            {
+              "fieldId": "totaldays",
+              "fieldValue": "={{ $('Prepare Leave Data').first().json.days }}"
+            },
+            {
+              "fieldId": "reason",
+              "fieldValue": "={{ $('Prepare Leave Data').first().json.reason }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "approved"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -288,
+        -16
+      ],
+      "id": "c693ac9e-c337-4e74-ab33-579a59c836c2",
+      "name": "Insert Leave Record"
+    },
+    {
+      "parameters": {
+        "sendTo": "REPLACE_WITH_HR_EMAIL",
+        "subject": "={{ $('Prepare Leave Data').first().json.leave_type === 'sick' ? '🏥' : '🏖️' }} แจ้งเตือน{{ $('Prepare Leave Data').first().json.leaveTypeThai }}: {{ $('Prepare Leave Data').first().json.firstname }} {{ $('Prepare Leave Data').first().json.lastname }}",
+        "emailType": "html",
+        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body style=\"margin:0;padding:0;font-family:'Segoe UI',Tahoma,Arial,sans-serif;background-color:#f0f2f5;\">\n<div style=\"max-width:600px;margin:20px auto;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);\">\n\n<!-- Header -->\n<div style=\"background:linear-gradient(135deg,{{ $('Prepare Leave Data').first().json.leave_type === 'sick' ? '#FF6B6B 0%,#EE5A5A 100%' : '#4ECDC4 0%,#44A08D 100%' }});padding:32px 24px;text-align:center;\">\n<div style=\"font-size:48px;margin-bottom:12px;\">{{ $('Prepare Leave Data').first().json.leave_type === 'sick' ? '🏥' : '🏖️' }}</div>\n<h1 style=\"margin:0;color:#ffffff;font-size:24px;font-weight:600;text-shadow:0 2px 4px rgba(0,0,0,0.1);\">แจ้ง{{ $('Prepare Leave Data').first().json.leaveTypeThai }}</h1>\n</div>\n\n<!-- Employee Info Card -->\n<div style=\"padding:24px;\">\n<div style=\"background:{{ $('Prepare Leave Data').first().json.leave_type === 'sick' ? 'linear-gradient(135deg,#FFF5F5 0%,#FFE8E8 100%)' : 'linear-gradient(135deg,#F0FFFC 0%,#E0FFF8 100%)' }};border-left:5px solid {{ $('Prepare Leave Data').first().json.leave_type === 'sick' ? '#FF6B6B' : '#4ECDC4' }};padding:20px;border-radius:0 12px 12px 0;margin-bottom:24px;\">\n<div style=\"display:flex;align-items:center;\">\n<div style=\"width:50px;height:50px;background:{{ $('Prepare Leave Data').first().json.leave_type === 'sick' ? '#FF6B6B' : '#4ECDC4' }};border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:16px;\">\n<span style=\"color:#fff;font-size:20px;font-weight:bold;\">{{ $('Prepare Leave Data').first().json.firstname.charAt(0) }}</span>\n</div>\n<div>\n<p style=\"margin:0;font-size:20px;color:#333;font-weight:600;\">{{ $('Prepare Leave Data').first().json.firstname }} {{ $('Prepare Leave Data').first().json.lastname }}</p>\n<p style=\"margin:4px 0 0 0;font-size:14px;color:#666;\">รหัสพนักงาน: {{ $json.empid }}</p>\n</div>\n</div>\n</div>\n\n<!-- Leave Type Badge -->\n<div style=\"text-align:center;margin-bottom:24px;\">\n<span style=\"display:inline-block;background:{{ $('Prepare Leave Data').first().json.leave_type === 'sick' ? 'linear-gradient(135deg,#FF6B6B,#EE5A5A)' : 'linear-gradient(135deg,#4ECDC4,#44A08D)' }};color:#fff;padding:10px 24px;border-radius:30px;font-size:16px;font-weight:600;box-shadow:0 4px 12px {{ $('Prepare Leave Data').first().json.leave_type === 'sick' ? 'rgba(255,107,107,0.4)' : 'rgba(78,205,196,0.4)' }};\">{{ $('Prepare Leave Data').first().json.leaveTypeThai }}</span>\n</div>\n\n<!-- Details Table -->\n<table style=\"width:100%;border-collapse:separate;border-spacing:0 8px;\">\n<tr>\n<td style=\"padding:16px;background:#f8f9fa;border-radius:8px 0 0 8px;color:#666;width:35%;font-size:14px;\">📅 วันที่ลา</td>\n<td style=\"padding:16px;background:#f8f9fa;border-radius:0 8px 8px 0;color:#333;font-weight:600;font-size:15px;\">{{ $('Prepare Leave Data').first().json.dateRange }}</td>\n</tr>\n<tr>\n<td style=\"padding:16px;background:#f8f9fa;border-radius:8px 0 0 8px;color:#666;font-size:14px;\">⏱️ จำนวนวัน</td>\n<td style=\"padding:16px;background:#f8f9fa;border-radius:0 8px 8px 0;color:#333;font-weight:600;font-size:15px;\">{{ $('Prepare Leave Data').first().json.days }} วัน</td>\n</tr>\n<tr>\n<td style=\"padding:16px;background:#f8f9fa;border-radius:8px 0 0 8px;color:#666;font-size:14px;\">📝 เหตุผล</td>\n<td style=\"padding:16px;background:#f8f9fa;border-radius:0 8px 8px 0;color:#333;font-size:15px;\">{{ $('Prepare Leave Data').first().json.reason }}</td>\n</tr>\n</table>\n\n<!-- Balance Box -->\n<div style=\"margin-top:24px;background:{{ $('Prepare Leave Data').first().json.leave_type === 'sick' ? 'linear-gradient(135deg,#FFF0F0 0%,#FFE0E0 100%)' : 'linear-gradient(135deg,#E8FFF8 0%,#D0FFE8 100%)' }};border-radius:16px;padding:24px;text-align:center;border:2px solid {{ $('Prepare Leave Data').first().json.leave_type === 'sick' ? '#FFD0D0' : '#B0FFE0' }};\">\n<p style=\"margin:0;font-size:14px;color:#888;font-weight:500;\">วันลาคงเหลือหลังจากครั้งนี้</p>\n<p style=\"margin:8px 0 0 0;font-size:42px;font-weight:700;color:{{ $('Prepare Leave Data').first().json.leave_type === 'sick' ? '#FF6B6B' : '#4ECDC4' }};text-shadow:0 2px 4px rgba(0,0,0,0.1);\">{{ $('Prepare Leave Data').first().json.new_balance }}</p>\n<p style=\"margin:4px 0 0 0;font-size:16px;color:#666;\">วัน</p>\n</div>\n</div>\n\n<!-- Footer -->\n<div style=\"background:linear-gradient(135deg,#f8f9fa 0%,#e9ecef 100%);padding:20px;text-align:center;border-top:1px solid #e0e0e0;\">\n<p style=\"margin:0;font-size:12px;color:#999;\">📧 ระบบแจ้งเตือนอัตโนมัติ HR System</p>\n<p style=\"margin:4px 0 0 0;font-size:11px;color:#bbb;\">อีเมลนี้ถูกส่งโดยอัตโนมัติ กรุณาอย่าตอบกลับ</p>\n</div>\n</div>\n</body></html>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -96,
+        -96
+      ],
+      "id": "d22d39bd-0c4f-4d1a-90e2-7d47e296dcd3",
+      "name": "Send HR Email"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"replyToken\": {{ JSON.stringify($('Parse Postback Data').first().json.replyToken) }},\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": {{ JSON.stringify('บันทึกการ' + $('Prepare Leave Data').first().json.leaveTypeThai + 'เรียบร้อยแล้วค่ะ\\n\\nวันที่ลา: ' + $('Prepare Leave Data').first().json.dateRange + '\\nจำนวน: ' + $('Prepare Leave Data').first().json.days + ' วัน\\nวันลาคงเหลือ: ' + $('Prepare Leave Data').first().json.new_balance + ' วัน') }}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -96,
+        64
+      ],
+      "id": "acde01bd-2372-4db8-af9f-e1e82ebdb7c7",
+      "name": "Reply Confirm Success"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"replyToken\": {{ JSON.stringify($('Parse Postback Data').first().json.replyToken) }},\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"ยกเลิกการลาเรียบร้อยแล้วค่ะ\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -864,
+        144
+      ],
+      "id": "9d0b392a-a869-4e37-a3a4-9604c6674ccc",
+      "name": "Reply Cancel"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6eecd421-7126-46b7-b4ae-cf98d3a7ada9",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "กดยืนยัน",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            },
+            {
+              "id": "69deed7d-9aef-4345-bb45-d931534ac531",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "กรุณาตรวจสอบข้อมูลการลา",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -832,
+        320
+      ],
+      "id": "87e12f9d-17a4-4d7e-90a5-efefc4b81369",
+      "name": "Check Leave Attachment"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Supabase Vector Update Data",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Supabase Vector Insert Data",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Vector Data update",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Supabase Vector Insert Data",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Supabase Vector Insert Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create File": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update File": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file1": {
+      "main": [
+        [
+          {
+            "node": "Supabase Vector Update Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a row": {
+      "main": [
+        [
+          {
+            "node": "Download file1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader1": {
+      "ai_document": [
+        [
+          {
+            "node": "Supabase Vector Update Data",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Check Record Active 2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set File Name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "Check Record Active",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file2": {
+      "main": [
+        [
+          {
+            "node": "Vector Data update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader2": {
+      "ai_document": [
+        [
+          {
+            "node": "Vector Data update",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leave Confirmation Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Record Active 2": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Download file2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Record Active": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set File Name for Create Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set File Name": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set File Name for Create Row": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete File": {
+      "main": [
+        [
+          {
+            "node": "Archive Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Cache": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Answer to Cache": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Check Leave Attachment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Line Chat API": {
+      "main": [
+        [
+          {
+            "node": "Event Type?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Event Type?": {
+      "main": [
+        [
+          {
+            "node": "Parse Postback Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Postback Data": {
+      "main": [
+        [
+          {
+            "node": "Action?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Action?": {
+      "main": [
+        [
+          {
+            "node": "Get Employee for Leave",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply Cancel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Employee for Leave": {
+      "main": [
+        [
+          {
+            "node": "Prepare Leave Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Leave Data": {
+      "main": [
+        [
+          {
+            "node": "Update Balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Balance": {
+      "main": [
+        [
+          {
+            "node": "Insert Leave Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Leave Record": {
+      "main": [
+        [
+          {
+            "node": "Send HR Email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Reply Confirm Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Employee Info": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Register LineID": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Leave Attachment": {
+      "main": [
+        [
+          {
+            "node": "Send To Line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

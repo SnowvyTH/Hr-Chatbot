@@ -1,0 +1,264 @@
+{
+  "name": "Register LineID",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "employee_id"
+            },
+            {
+              "name": "line_id"
+            }
+          ]
+        }
+      },
+      "id": "c055762a-8fe7-4141-a639-df2372f30060",
+      "typeVersion": 1.1,
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        272,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "employee",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "empid",
+              "keyValue": "={{ $json.employee_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        432,
+        352
+      ],
+      "id": "c5ab4e0d-c915-4f84-8e51-6d7cc1f7a5db",
+      "name": "Get a row",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f677fafb-ed52-44cc-893e-d93030fd9987",
+              "leftValue": "={{ $item(\"0\").$node[\"Get a row\"].json }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        592,
+        352
+      ],
+      "id": "a912aac8-e052-4861-b64e-8a476eff0119",
+      "name": "Check EmpID Vaild"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8c553813-23d5-4950-be12-d53c923f2009",
+              "leftValue": "={{ $item(\"0\").$node[\"Check EmpID Vaild\"].json[\"lineid\"] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        768,
+        336
+      ],
+      "id": "5908a349-ee9e-46e3-9779-9ab79a81a2af",
+      "name": "Check LineID is empty"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "employee",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "empid",
+              "condition": "eq",
+              "keyValue": "={{ $item(\"0\").$node[\"Check LineID is empty\"].json[\"empid\"] }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "lineid",
+              "fieldValue": "={{ $item(\"0\").$node[\"When Executed by Another Workflow\"].json[\"line_id\"] }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        976,
+        272
+      ],
+      "id": "89d1cc04-f0a6-4570-bfca-168e77014e65",
+      "name": "Update a row"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    \"response\": \"พบข้อผิดพลาด ลงทะเบียนไม่สำเร็จเนื่องจาก ไม่พบรหัสพนักงานนี้\"\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        592
+      ],
+      "id": "8504ea86-0dad-4bec-bd19-cb387e42fc8a",
+      "name": "Return Error Wrong EmpID"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    \"response\": \"พบข้อผิดพลาด เนื่องจากไอดีไลน์นี้ได้ถูกผูกไปแล้ว\"\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        432
+      ],
+      "id": "9589650f-5b5a-455a-85ef-891a32473355",
+      "name": "Return Error LineID is not empty"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    \"response\": \"ลงทะเบียนสำเร็จ ท่านสามารถพิมสอบถามหรือพิมลากับระบบได้เลยค่ะ\"\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        272
+      ],
+      "id": "5f0cf019-3ebc-4316-b44b-590e4411589d",
+      "name": "Success Register"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Get a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a row": {
+      "main": [
+        [
+          {
+            "node": "Check EmpID Vaild",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check EmpID Vaild": {
+      "main": [
+        [
+          {
+            "node": "Check LineID is empty",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Error Wrong EmpID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check LineID is empty": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Error LineID is not empty",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a row": {
+      "main": [
+        [
+          {
+            "node": "Success Register",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
